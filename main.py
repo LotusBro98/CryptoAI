@@ -4,58 +4,54 @@ import matplotlib.pyplot as plt
 
 import distribution
 from layer import Layer
+from model import Model
 
-N_ALL = 1024 * 4
-N_LAYERS = 11
-CUT_PROB = 0.001
+N_MAX = 16
+MAX_SAMPLES = 10000
+N_LAYERS = 10
+CUT_PROB = 0.01
 
 with open("data/Sample-text-file-1000kb.txt", "rt") as f:
     data = f.read()
-data = data[:N_ALL]
-data = data.encode()
+data = data.split(" ")
+# data = data[:MAX_SAMPLES]
+data = [a + " " + b for a, b in zip(data[0::2], data[1::2])]
+data = [(word[:N_MAX] + " " * (N_MAX - len(word))).encode() for word in data]
 data0 = data
 
-data = np.frombuffer(data, dtype=np.uint8)
+data = np.frombuffer(b"".join(data), dtype=np.uint8)
+data = data.reshape((-1, N_MAX, 1))
 
 layers = []
 
-for i in range(N_LAYERS):
-    layer = Layer()
-    layer.fit(data, cut_p=CUT_PROB)
-    data = layer.compress(data)
-    distribution.test_data(data)
-    layers.append(layer)
-    print(data.shape)
+model = Model()
+model.fit(data, CUT_PROB)
 
-for i in range(N_LAYERS):
-    data = layers[N_LAYERS-1-i].decompress(data)
-    print(data.shape)
+latent = model.compress(data)
 
-data = data.tobytes().decode()
-print(data)
+data = model.decompress(latent)
+
+for i in range(16):
+    print("===================")
+    print(data0[i].decode())
+    print("-------------------")
+    print(data[i].tobytes().decode())
+
+
 
 # key = b'Sixteen byte key'
-# cipher = AES.new(key, AES.MODE_EAX)
 #
-# nonce = cipher.nonce
-# ciphertext, tag = cipher.encrypt_and_digest(data0)
-# print(ciphertext)
+# data_crypt = []
+# for i, word in enumerate(data0):
+#     key = word
+#     cipher = AES.new(key, AES.MODE_EAX)
+#     nonce = cipher.nonce
+#     ciphertext, tag = cipher.encrypt_and_digest(data0[0])
+#     data_crypt.append(ciphertext)
+#     print(f"\r{i} / {len(data0)}", end="")
+# data_crypt = np.frombuffer(b"".join(data_crypt), dtype=np.uint8)
+# data_crypt = data_crypt.reshape((-1, N_MAX, 1))
+# data_crypt = np.unpackbits(data_crypt, axis=-1)
 #
-# cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
-# plaintext = cipher.decrypt(ciphertext)
-# print(plaintext)
-#
-# data = ciphertext
-# data = np.frombuffer(data, dtype=np.uint8)
-# data = np.unpackbits(data)
-# data = np.reshape(data, (-1, 8))
-#
-# data = data.reshape((-1, 2, data.shape[-1]))
-# data = np.split(data, data.shape[-2], axis=-2)
-# data = np.concatenate(data, axis=-1)
-# print(data.shape)
-#
-# A = distribution.get_cross_probability_table(data)
-# print(A)
-# plt.imshow(np.abs(A))
-# plt.show()
+# model_crypt = Model()
+# model_crypt.fit(data_crypt, cut_p=CUT_PROB)
