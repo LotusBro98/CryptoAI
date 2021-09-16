@@ -2,11 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import distribution
-from distribution import packbits, unpackbits, CHUNK_N
+from distribution import CHUNK_N
+from operations import packbits, unpackbits, convolve1d, deconvolve1d
+
 
 class Layer:
+    def __init__(self, convolve=False):
+        self.convolve = convolve
+
     def fit(self, x, cut_p=0.01):
         self.width, self.depth = x.shape[-2:]
+        if self.width == 1:
+            self.convolve = False
         x = packbits(x)
 
         self.LUT = []
@@ -27,19 +34,13 @@ class Layer:
             for i in range(x.shape[-1])
         ], axis=-1)
 
-        if self.width > 1:
-            y = y.reshape(y.shape[:-2] + (y.shape[-2] // 2, 2, -1))
-            # y = np.swapaxes(y, -1, -2)
-            y = y.reshape(y.shape[:-2] + (-1,))
-
+        if (self.convolve):
+            y = convolve1d(y)
         return y
 
     def decompress(self, y):
-        if self.width > 1:
-            y = y.reshape(y.shape[:-1] + (-1, 2))
-            # y = np.swapaxes(y, -1, -2)
-            # y = y.reshape(y.shape[:-3] + (-1, y.shape[-1]))
-            y = y.reshape(y.shape[:-3] + (-1, y.shape[-2]))
+        if (self.convolve):
+            y = deconvolve1d(y)
 
         y = np.split(y, np.cumsum(self.save_bits), axis=-1)[:-1]
         x = [np.take(self.LUT_1[i], packbits(yi, last_only=True)) for i, yi in enumerate(y) if yi.shape[-1] > 0]
