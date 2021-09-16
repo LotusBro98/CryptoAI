@@ -8,14 +8,30 @@ class Model:
     def fit(self, x, cut_p):
         x = np.unpackbits(x, axis=-1)
 
-        depth_prev = x.shape[-1]
-        width_prev = x.shape[-2]
-        while not (x.shape[-2] == 1 and width_prev == 1 and depth_prev == x.shape[-1]):
-            layer = Layer()
+        while x.shape[-2] > 1:
+            depth_prev = 0
+            while depth_prev != x.shape[-1]:
+                depth_prev = x.shape[-1]
+
+                layer = Layer(convolve=False)
+                layer.fit(x, cut_p)
+                self.layers.append(layer)
+                x = layer.compress(x)
+                print(x.shape)
+
+            layer = Layer(convolve=True)
             layer.fit(x, cut_p)
             self.layers.append(layer)
+            x = layer.compress(x)
+            print(x.shape)
+
+        depth_prev = 0
+        while depth_prev != x.shape[-1]:
             depth_prev = x.shape[-1]
-            width_prev = x.shape[-2]
+
+            layer = Layer(convolve=False)
+            layer.fit(x, cut_p)
+            self.layers.append(layer)
             x = layer.compress(x)
             print(x.shape)
 
